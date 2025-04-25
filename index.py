@@ -2,29 +2,34 @@ import cv2
 import numpy as np
 
 # Carrega a imagem
-imagem = cv2.imread("car1.jpg")
+imagem = cv2.imread("car2.jpg")
 imagem = cv2.resize(imagem, (800, 600))
 hsv = cv2.cvtColor(imagem, cv2.COLOR_BGR2HSV)
 
-
+# Faixas de vermelho ajustadas (aceita vermelho mais escuro)
 vermelho_baixo = np.array([10, 100, 50])
 vermelho_alto = np.array([8, 255, 255])
 vermelho_baixo2 = np.array([172, 100, 50])
 vermelho_alto2 = np.array([180, 255, 255])
 
+# Máscara para tons de vermelho
 mascara1 = cv2.inRange(hsv, vermelho_baixo, vermelho_alto)
 mascara2 = cv2.inRange(hsv, vermelho_baixo2, vermelho_alto2)
 mascara_vermelha = mascara1 + mascara2
 
-
-kernel = np.ones((25, 25), np.uint8)
+# Aumenta a união entre regiões próximas
+kernel = np.ones((25, 25), np.uint8)  # kernel maior para unir regiões mais distantes
 mascara_vermelha = cv2.morphologyEx(mascara_vermelha, cv2.MORPH_CLOSE, kernel)
 
-
+# Encontra contornos
 contornos, _ = cv2.findContours(mascara_vermelha, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+# Parâmetros de área
 area_minima = 500
 area_maxima = 20000
+quantidade_carros = 0
+
+# Lista para armazenar caixas válidas
 caixas = []
 
 for contorno in contornos:
@@ -41,13 +46,15 @@ def juntar_caixas(caixas, dist=30):
         i = 0
         while i < len(caixas):
             a1, b1, a2, b2 = caixas[i]
+            # Verifica sobreposição ou proximidade
             if not (x2 + dist < a1 or x1 - dist > a2 or y2 + dist < b1 or y1 - dist > b2):
+                # Atualiza caixa combinada
                 x1 = min(x1, a1)
                 y1 = min(y1, b1)
                 x2 = max(x2, a2)
                 y2 = max(y2, b2)
                 caixas.pop(i)
-                i = 0  
+                i = 0  # reinicia busca
             else:
                 i += 1
         resultado.append([x1, y1, x2, y2])
